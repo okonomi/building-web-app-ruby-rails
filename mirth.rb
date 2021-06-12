@@ -31,7 +31,7 @@ loop do
     STR
 
   when ["POST", "/add/birthday"]
-    response_status_code = "201 Created"
+    response_status_code = "303 See Other"
     content_type = "text/html"
     response_message = ""
 
@@ -42,9 +42,7 @@ loop do
       header_name, value = line.chomp.split(": ")
       all_headers[header_name] = value
     end
-    puts all_headers
     body = client.read(all_headers['Content-Length'].to_i)
-    puts body
 
     require 'uri'
     new_birthday = URI.decode_www_form(body).to_h
@@ -53,14 +51,19 @@ loop do
   else
     response_status_code = "200 OK"
     content_type = "text/plain"
-    response_message = "Received a #{method_token} request to #{target} with #{version_number}"
+    response_message = "✅ Received a #{method_token} request to #{target} with #{version_number}"
   end
 
-  client.puts <<~MSG
+  puts response_message
+
+  http_response = <<~MSG
     #{version_number} #{response_status_code}
-    Content-Type: #{content_type}
+    Content-Type: #{content_type}; charset=#{response_message.encoding.name}
+    Location: /show/birthdays
 
     #{response_message}
   MSG
+
+  client.puts http_response
   client.close
 end
