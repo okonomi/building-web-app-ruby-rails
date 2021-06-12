@@ -1,5 +1,7 @@
 require 'socket'
 
+birthdays = []
+
 server = TCPServer.new(1337)
 loop do
   client = server.accept
@@ -13,8 +15,21 @@ loop do
   case [method_token, target]
   when ["GET", "/show/birthdays"]
     response_status_code = "200 OK"
-    content_type = "text/plain"
-    response_message = "show birthdays"
+    content_type = "text/html"
+    response_message = ""
+    response_message << "<ul>\n"
+    birthdays.each do |birthday|
+      response_message << "<li> <b>#{birthday[:name]}</b> was born on #{birthday[:date]}!</li>\n"
+    end
+    response_message << "</ul>\n"
+    response_message << <<~STR
+      <form action="/add/birthday" method="post">
+        <p><label>Name <input type="text" name="name" /></label></p>
+        <p><label>Birthday <input type="date" name="date" /></label></p>
+        <p><button>Submit birthday</button></p>
+      </form>
+    STR
+
   when ["POST", "/add/birthday"]
     response_status_code = "201 Created"
     content_type = "text/plain"
