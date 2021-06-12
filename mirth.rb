@@ -10,8 +10,12 @@ loop do
   puts request_line
 
   method_token, target, version_number = request_line.split
-  response_body = "✅ Received a #{method_token} request to #{target} with #{version_number}"
+  response_body = "Received a #{method_token} request to #{target} with #{version_number}"
+  client.puts <<~MSG
+    #{version_number} 200 OK
+    Content-Type: text/plain
 
-  client.puts response_body
+    #{response_body}
+  MSG
   client.close
 end
