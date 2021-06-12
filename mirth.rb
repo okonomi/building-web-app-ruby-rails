@@ -32,8 +32,24 @@ loop do
 
   when ["POST", "/add/birthday"]
     response_status_code = "201 Created"
-    content_type = "text/plain"
-    response_message = "add birthday"
+    content_type = "text/html"
+    response_message = ""
+
+    all_headers = {}
+    while true
+      line = client.readline
+      break if line == "\r\n"
+      header_name, value = line.chomp.split(": ")
+      all_headers[header_name] = value
+    end
+    puts all_headers
+    body = client.read(all_headers['Content-Length'].to_i)
+    puts body
+
+    require 'uri'
+    new_birthday = URI.decode_www_form(body).to_h
+
+    birthdays << new_birthday.transform_keys(&:to_sym)
   else
     response_status_code = "200 OK"
     content_type = "text/plain"
