@@ -38,8 +38,8 @@ loop do
     response_message << "</ul>\n"
     response_message << <<~STR
       <form action="/add/birthday" method="post">
-        <p><label>Name <input type="text" name="name" /></label></p>
-        <p><label>Birthday <input type="date" name="date" /></label></p>
+        <p><label>Name <input type="text" name="name" required /></label></p>
+        <p><label>Birthday <input type="date" name="date" required /></label></p>
         <p><button>Submit birthday</button></p>
       </form>
     STR
