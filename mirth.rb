@@ -1,8 +1,17 @@
 require 'socket'
+require 'yaml/store'
 
 birthdays = []
 
 server = TCPServer.new(1337)
+
+store = YAML::Store.new('mirth.yml')
+store.transaction do
+  unless store[:birthdays]
+    store[:birthdays] = []
+  end
+end
+
 loop do
   client = server.accept
 
@@ -16,9 +25,14 @@ loop do
   when ["GET", "/show/birthdays"]
     response_status_code = "200 OK"
     content_type = "text/html"
-    response_message = ""
-    response_message << "<ul>\n"
-    birthdays.each do |birthday|
+    response_message = "<ul>\n"
+
+    all_birthdays = []
+    store.transaction do
+      all_birthdays = store[:birthdays]
+    end
+
+    all_birthdays.each do |birthday|
       response_message << "<li> <b>#{birthday[:name]}</b> was born on #{birthday[:date]}!</li>\n"
     end
     response_message << "</ul>\n"
@@ -47,7 +61,9 @@ loop do
     require 'uri'
     new_birthday = URI.decode_www_form(body).to_h
 
-    birthdays << new_birthday.transform_keys(&:to_sym)
+    store.transaction do
+      store[:birthdays] << new_birthday.transform_keys(&:to_sym)
+    end
   else
     response_status_code = "200 OK"
     content_type = "text/plain"
