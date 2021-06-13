@@ -1,0 +1,12 @@
+<ul>
+<% @birthdays.each do |birthday| %>
+  <li> <b><%= birthday[:name] %></b> was born on <%= birthday[:date] %>!</li>
+<% end %>
+</ul>
+
+
+<form action="/birthdays" method="post">
+  <p><label>Name <input type="text" name="name" required /></label></p>
+  <p><label>Birthday <input type="date" name="date" required /></label></p>
+  <p><button>Submit birthday</button></p>
+</form>

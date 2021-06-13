@@ -3,6 +3,9 @@ require 'rack/handler/puma'
 
 require 'sqlite3'
 
+require 'action_controller'
+require 'action_dispatch'
+
 app = -> environment do
   request = Rack::Request.new(environment)
   response = Rack::Response.new
@@ -43,4 +46,23 @@ app = -> environment do
   response.finish
 end
 
-Rack::Handler::Puma.run(app, Port: 1337, Verbose: true)
+ActionController::Base.prepend_view_path('.')
+
+class BirthdaysController < ActionController::Base
+  def index
+    @birthdays = [{ name: 'okonomi', date: '2021-01-01'}]
+  end
+
+  def create
+    redirect_to action: :index
+  end
+end
+
+router = ActionDispatch::Routing::RouteSet.new
+BirthdaysController.include(router.url_helpers)
+
+router.draw do
+  resources :birthdays
+end
+
+Rack::Handler::Puma.run(router, Port: 1337, Verbose: true)
