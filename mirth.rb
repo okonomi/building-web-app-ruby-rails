@@ -1,31 +1,23 @@
-require 'yaml/store'
-
 require 'rack'
 require 'rack/handler/puma'
+
+require 'sqlite3'
 
 app = -> environment do
   request = Rack::Request.new(environment)
   response = Rack::Response.new
 
-  store = YAML::Store.new('mirth.yml')
-  store.transaction do
-    unless store[:birthdays]
-      store[:birthdays] = []
-    end
-  end
+  database = SQLite3::Database.new 'mirth.sqlite3', results_as_hash: true
 
   if request.get? && request.path == '/show/birthdays'
     response.status = 200
-    response.content_type = 'text/html'
+    response.content_type = 'text/html; charset=UTF-8'
     response.write "<ul>\n"
 
-    all_birthdays = []
-    store.transaction do
-      all_birthdays = store[:birthdays]
-    end
+    all_birthdays = database.execute('SELECT * FROM birthdays')
 
     all_birthdays.each do |birthday|
-      response.write "<li> <b>#{birthday[:name]}</b> was born on #{birthday[:date]}!</li>\n"
+      response.write "<li> <b>#{birthday['name']}</b> was born on #{birthday['date']}!</li>\n"
     end
     response.write "</ul>\n"
     response.write <<~STR
@@ -37,9 +29,9 @@ app = -> environment do
     STR
   elsif request.post? && request.path == '/add/birthday'
     new_birthday = request.params
-    store.transaction do
-      store[:birthdays] << new_birthday.transform_keys(&:to_sym)
-    end
+
+    query = 'INSERT INTO birthdays (name, date) VALUES (?, ?)'
+    database.execute query, [new_birthday['name'], new_birthday['date']]
 
     response.redirect '/show/birthdays', 303
   else
