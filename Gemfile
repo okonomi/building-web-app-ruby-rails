@@ -9,3 +9,4 @@ gem 'puma'
 gem 'sqlite3'
 
 gem 'actionpack'
+gem 'activerecord'
