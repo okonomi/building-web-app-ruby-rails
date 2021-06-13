@@ -1,30 +1,21 @@
-require 'socket'
 require 'yaml/store'
 
-birthdays = []
+require 'rack'
+require 'rack/handler/puma'
 
-server = TCPServer.new(1337)
+app = -> environment do
+  request = Rack::Request.new(environment)
 
-store = YAML::Store.new('mirth.yml')
-store.transaction do
-  unless store[:birthdays]
-    store[:birthdays] = []
+  store = YAML::Store.new('mirth.yml')
+  store.transaction do
+    unless store[:birthdays]
+      store[:birthdays] = []
+    end
   end
-end
 
-loop do
-  client = server.accept
-
-  request_line = client.readline
-
-  puts "The HTTP request line looks line this:"
-  puts request_line
-
-  method_token, target, version_number = request_line.split
-  case [method_token, target]
-  when ["GET", "/show/birthdays"]
-    response_status_code = "200 OK"
-    content_type = "text/html"
+  if request.get? && request.path == '/show/birthdays'
+    status = 200
+    content_type = 'text/html'
     response_message = "<ul>\n"
 
     all_birthdays = []
@@ -43,43 +34,29 @@ loop do
         <p><button>Submit birthday</button></p>
       </form>
     STR
+  elsif request.post? && request.path == '/add/birthday'
+    status = 303
+    content_type = 'text/html'
+    response_message = ''
 
-  when ["POST", "/add/birthday"]
-    response_status_code = "303 See Other"
-    content_type = "text/html"
-    response_message = ""
-
-    all_headers = {}
-    while true
-      line = client.readline
-      break if line == "\r\n"
-      header_name, value = line.chomp.split(": ")
-      all_headers[header_name] = value
-    end
-    body = client.read(all_headers['Content-Length'].to_i)
-
-    require 'uri'
-    new_birthday = URI.decode_www_form(body).to_h
+    new_birthday = request.params
 
     store.transaction do
       store[:birthdays] << new_birthday.transform_keys(&:to_sym)
     end
   else
-    response_status_code = "200 OK"
-    content_type = "text/plain"
-    response_message = "✅ Received a #{method_token} request to #{target} with #{version_number}"
+    status = 200
+    content_type = 'text/plain'
+    response_message = "✅ Received a #{request.request_method} request to #{request.path}"
   end
 
-  puts response_message
+  headers = {
+    'Content-Type' => "#{content_type}; charset=#{response_message.encoding.name}",
+    'Location' => '/show/birthdays'
+  }
+  body = [response_message]
 
-  http_response = <<~MSG
-    #{version_number} #{response_status_code}
-    Content-Type: #{content_type}; charset=#{response_message.encoding.name}
-    Location: /show/birthdays
-
-    #{response_message}
-  MSG
-
-  client.puts http_response
-  client.close
+  [status, headers, body]
 end
+
+Rack::Handler::Puma.run(app, Port: 1337, Verbose: true)
